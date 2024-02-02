@@ -36,25 +36,39 @@ func (r *SummaryRepository) GetAll() ([]*models.Summary, error) {
 
 func (r *SummaryRepository) Insert(summary *models.Summary) error {
 
-	itemsToCreate := []interface{}{summary}
+	if err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := r.db.Create(summary).Error; err != nil {
+			return err
+		}
 
-	for _, item := range summary.Machines {
-		itemsToCreate = append(itemsToCreate, item)
-	}
+		itemsToCreate := []*models.SummaryItem{}
 
-	for _, item := range summary.Languages {
-		itemsToCreate = append(itemsToCreate, item)
-	}
+		for _, item := range summary.Machines {
+			item.SummaryID = summary.ID
+			itemsToCreate = append(itemsToCreate, item)
+		}
 
-	for _, item := range summary.OperatingSystems {
-		itemsToCreate = append(itemsToCreate, item)
-	}
+		for _, item := range summary.Languages {
+			item.SummaryID = summary.ID
+			itemsToCreate = append(itemsToCreate, item)
+		}
 
-	for _, item := range summary.Editors {
-		itemsToCreate = append(itemsToCreate, item)
-	}
+		for _, item := range summary.OperatingSystems {
+			item.SummaryID = summary.ID
+			itemsToCreate = append(itemsToCreate, item)
+		}
 
-	if err := r.db.Create(itemsToCreate).Error; err != nil {
+		for _, item := range summary.Editors {
+			item.SummaryID = summary.ID
+			itemsToCreate = append(itemsToCreate, item)
+		}
+
+		if err := r.db.Create(itemsToCreate).Error; err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		return err
 	}
 
